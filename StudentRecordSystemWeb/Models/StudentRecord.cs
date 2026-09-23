@@ -45,7 +45,7 @@ public class StudentRecord
     public List<UnitEnrollment> Units { get; set; } = new();
 
     // Now we recalculates WAM using LINQ's Average instead of a manual loop.
-    public double CalculateWAM()
+    public double CalculateWam()
     {
         Wam = Units.Count == 0 ? 0.0 : Math.Round(Units.Average(u => u.Mark), 2);
         return Wam;

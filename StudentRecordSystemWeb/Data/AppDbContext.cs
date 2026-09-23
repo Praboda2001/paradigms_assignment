@@ -36,7 +36,7 @@ public class AppDbContext : DbContext
 
         // We use this to ensure no two students can share the same Student ID.
         modelBuilder.Entity<StudentRecord>()
-            .HasIndex(r => r.StudentId)
+            .HasIndex(r => r.StudentID)
             .IsUnique();
 
         // We use this to ensure no two accounts can share the same username.
