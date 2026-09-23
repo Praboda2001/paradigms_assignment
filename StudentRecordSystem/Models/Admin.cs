@@ -8,5 +8,6 @@ namespace StudentRecordSystem.Models;
 // Admins can add/ update/ remove student recoeds through recordManager.
 public class Admin : User
 {
+    // This returns "Administrator" for this role.
     public override string GetRoleDescription() => "Administrator";
 }
