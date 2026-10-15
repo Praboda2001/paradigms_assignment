@@ -32,16 +32,22 @@ else
 
     <table border="1" cellpadding="6" style="margin-top:12px;">
         <thead>
-            <tr><th>Student ID</th><th>Name</th><th>Program</th><th>WAM</th><th>Status</th><th></th></tr>
+            <tr><th>Rank</th><th>Student ID</th><th>Name</th><th>Program</th><th>WAM</th><th>Status</th><th></th></tr>
         </thead>
         <tbody>
             @foreach (var record in records)
             {
                 <tr>
+                    <td>@ranks.GetValueOrDefault(record.Id)</td>
                     <td>@record.StudentID</td>
                     <td>@record.Name</td>
                     <td>@record.Program</td>
-                    <td>@record.Wam.ToString("F2")</td>
+                    <td>
+                        @record.Wam.ToString("F2")
+                        <div style="background:#e0e0e0; width:120px; height:8px; border-radius:4px;">
+                            <div style="background:#2b579a; width:@((int)Math.Clamp(record.Wam, 0, 100))%; height:8px; border-radius:4px;"></div>
+                        </div>
+                    </td>
                     <td>@record.Status</td>
                     <td>
                         <button @onclick="() => GoToEdit(record.Id)">Edit</button>
@@ -55,6 +61,7 @@ else
 
 @code {
     private List<StudentRecord> records = new();
+    private Dictionary<int, int> ranks = new();
     private string searchId = string.Empty;
     private string? errorMessage;
     private bool isAuthorised;
@@ -86,6 +93,9 @@ else
     private async Task LoadAll()
     {
         records = await RecordManager.GetAllRecordsAsync();
+        // Ranks always come from the full list, so a search result
+        // still shows the student's real class rank.
+        ranks = RecordManager.CalculateRanks(records);
     }
 
     private async Task Search()

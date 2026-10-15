@@ -93,6 +93,31 @@ public class RecordManager
 		await _context.SaveChangesAsync();
 	}
 
+	// Works out each student's class rank by WAM (1 = highest). Students
+	// with the same WAM share a rank and the next rank is skipped,
+	// like a normal leaderboard (1, 2, 2, 4).
+	public Dictionary<int, int> CalculateRanks(List<StudentRecord> records)
+	{
+		var ordered = records.OrderByDescending(r => r.Wam).ToList();
+		var ranks = new Dictionary<int, int>();
+
+		int rank = 0;
+		double? previousWam = null;
+
+		for (int i = 0; i < ordered.Count; i++)
+		{
+			// Only move the rank on when the WAM actually changes.
+			if (ordered[i].Wam != previousWam)
+			{
+				rank = i + 1;
+				previousWam = ordered[i].Wam;
+			}
+			ranks[ordered[i].Id] = rank;
+		}
+
+		return ranks;
+	}
+
 	// Recalculates WAM for every student at once, spread across
 	// multiple CPU cores instead of doing them one at a time.
 	public async Task<int> RecalculateAllWamAsync()
