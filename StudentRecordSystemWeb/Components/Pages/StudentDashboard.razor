@@ -1,0 +1,65 @@
+@page "/student"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using StudentRecordSystem.Models
+@using StudentRecordSystem.Services
+@inject RecordManager RecordManager
+@inject SessionService Session
+@inject NavigationManager Nav
+
+<PageTitle>My Record</PageTitle>
+
+@if (record is null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <h1>@record.Name</h1>
+    <p>@record.Program</p>
+    <p>Status: @record.Status</p>
+
+    <p><strong>Weighted Average Mark: @record.Wam.ToString("F2")</strong></p>
+
+    <h2>Enrolled Units</h2>
+    <table border="1" cellpadding="6">
+        <thead>
+            <tr><th>Code</th><th>Unit</th><th>Semester</th><th>Grade</th><th>Mark</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var unit in record.Units)
+            {
+                <tr>
+                    <td>@unit.UnitCode</td>
+                    <td>@unit.UnitName</td>
+                    <td>@unit.Semester</td>
+                    <td>@unit.Grade</td>
+                    <td>@unit.Mark.ToString("F1")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <button @onclick="Logout" style="margin-top:12px;">Log Out</button>
+}
+
+@code {
+    private StudentRecord? record;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Only students get past this point.
+        if (Session.CurrentUser is not Student student)
+        {
+            Nav.NavigateTo("/");
+            return;
+        }
+
+        record = await RecordManager.TryGetByIdAsync(student.StudentRecordId);
+    }
+
+    private void Logout()
+    {
+        Session.CurrentUser = null;
+        Nav.NavigateTo("/");
+    }
+}

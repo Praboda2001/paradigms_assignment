@@ -1,0 +1,175 @@
+@page "/admin/edit"
+@page "/admin/edit/{Id:int}"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using StudentRecordSystem.Exceptions
+@using StudentRecordSystem.Models
+@using StudentRecordSystem.Services
+@inject RecordManager RecordManager
+@inject SessionService Session
+@inject NavigationManager Nav
+
+<PageTitle>@(isEditMode ? "Edit Student" : "Add Student")</PageTitle>
+
+<h1>@(isEditMode ? "Edit Student" : "Add Student")</h1>
+
+<input @bind="studentId" placeholder="Student ID (e.g. STU1001)" disabled="@isEditMode" /><br />
+<input @bind="name" placeholder="Full Name" /><br />
+<input @bind="program" placeholder="Program" /><br />
+<select @bind="status">
+    <option>Active</option>
+    <option>Suspended</option>
+    <option>Graduated</option>
+</select>
+
+<h2>Enrolled Units</h2>
+<table border="1" cellpadding="6">
+    <thead>
+        <tr><th>Code</th><th>Name</th><th>Semester</th><th>Grade</th><th>Mark</th><th></th></tr>
+    </thead>
+    <tbody>
+        @foreach (var unit in units)
+        {
+            <tr>
+                <td>@unit.UnitCode</td>
+                <td>@unit.UnitName</td>
+                <td>@unit.Semester</td>
+                <td>@unit.Grade</td>
+                <td>@unit.Mark.ToString("F1")</td>
+                <td><button @onclick="() => RemoveUnit(unit)">Remove</button></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div style="margin-top:10px;">
+    <input @bind="newUnitCode" placeholder="Code" />
+    <input @bind="newUnitName" placeholder="Unit Name" />
+    <input @bind="newUnitSemester" placeholder="Semester" />
+    <input @bind="newUnitGrade" placeholder="Grade" />
+    <input @bind="newUnitMark" placeholder="Mark" />
+    <button @onclick="AddUnit">+ Add Unit</button>
+</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p style="color:red">@errorMessage</p>
+}
+
+<br />
+<button @onclick="Save">Save</button>
+<button @onclick="Cancel">Cancel</button>
+
+@code {
+    // Filled in automatically from the route when editing, e.g. /admin/edit/5
+    [Parameter]
+    public int? Id { get; set; }
+
+    private bool isEditMode;
+
+    private string studentId = string.Empty;
+    private string name = string.Empty;
+    private string program = string.Empty;
+    private string status = "Active";
+    private List<UnitEnrollment> units = new();
+
+    private string newUnitCode = string.Empty;
+    private string newUnitName = string.Empty;
+    private string newUnitSemester = string.Empty;
+    private string newUnitGrade = string.Empty;
+    private string newUnitMark = string.Empty;
+
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Session.CurrentUser is not Admin)
+        {
+            Nav.NavigateTo("/");
+            return;
+        }
+
+        // If an Id came through the route we are editing an existing record.
+        if (Id.HasValue)
+        {
+            var editingRecord = await RecordManager.TryGetByIdAsync(Id.Value);
+            if (editingRecord is not null)
+            {
+                isEditMode = true;
+                studentId = editingRecord.StudentID;
+                name = editingRecord.Name;
+                program = editingRecord.Program;
+                status = editingRecord.Status;
+                units = editingRecord.Units.ToList();
+            }
+        }
+    }
+
+    private void AddUnit()
+    {
+        if (string.IsNullOrWhiteSpace(newUnitCode) || string.IsNullOrWhiteSpace(newUnitName))
+        {
+            errorMessage = "Unit code and unit name are required.";
+            return;
+        }
+
+        double.TryParse(newUnitMark, out double mark);
+
+        units.Add(new UnitEnrollment
+        {
+            UnitCode = newUnitCode.Trim(),
+            UnitName = newUnitName.Trim(),
+            Semester = newUnitSemester.Trim(),
+            Grade = newUnitGrade.Trim(),
+            Mark = mark
+        });
+
+        newUnitCode = newUnitName = newUnitSemester = newUnitGrade = newUnitMark = string.Empty;
+        errorMessage = null;
+    }
+
+    private void RemoveUnit(UnitEnrollment unit) => units.Remove(unit);
+
+    private async Task Save()
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(studentId) || string.IsNullOrWhiteSpace(name))
+        {
+            errorMessage = "Student ID and name are required.";
+            return;
+        }
+
+        var record = new StudentRecord
+        {
+            StudentID = studentId.Trim(),
+            Name = name.Trim(),
+            Program = program.Trim(),
+            Status = status,
+            Units = units
+        };
+
+        try
+        {
+            if (!isEditMode)
+            {
+                await RecordManager.AddRecordAsync(record);
+            }
+            else
+            {
+                await RecordManager.UpdateRecordAsync(record);
+            }
+
+            Nav.NavigateTo("/admin");
+        }
+        catch (DuplicateStudentException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (ArgumentException ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private void Cancel() => Nav.NavigateTo("/admin");
+}

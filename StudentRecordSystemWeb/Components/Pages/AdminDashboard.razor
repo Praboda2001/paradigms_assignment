@@ -1,0 +1,151 @@
+@page "/admin"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using StudentRecordSystem.Exceptions
+@using StudentRecordSystem.Models
+@using StudentRecordSystem.Services
+@inject RecordManager RecordManager
+@inject SessionService Session
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Admin Dashboard</PageTitle>
+
+@if (!isAuthorised)
+{
+    <p>Redirecting...</p>
+}
+else
+{
+    <h1>Welcome, @(Session.CurrentUser?.Username) (@(Session.CurrentUser?.GetRoleDescription()))</h1>
+
+    <input @bind="searchId" placeholder="Search by Student ID" />
+    <button @onclick="Search">Search</button>
+    <button @onclick="ShowAll">Show All</button>
+    <button @onclick="GoToAdd">Add Student</button>
+    <button @onclick="RecalculateAll">Recalculate All WAM</button>
+    <button @onclick="Logout">Log Out</button>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p style="color:red">@errorMessage</p>
+    }
+
+    <table border="1" cellpadding="6" style="margin-top:12px;">
+        <thead>
+            <tr><th>Student ID</th><th>Name</th><th>Program</th><th>WAM</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var record in records)
+            {
+                <tr>
+                    <td>@record.StudentID</td>
+                    <td>@record.Name</td>
+                    <td>@record.Program</td>
+                    <td>@record.Wam.ToString("F2")</td>
+                    <td>@record.Status</td>
+                    <td>
+                        <button @onclick="() => GoToEdit(record.Id)">Edit</button>
+                        <button @onclick="() => Remove(record.StudentID)">Remove</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<StudentRecord> records = new();
+    private string searchId = string.Empty;
+    private string? errorMessage;
+    private bool isAuthorised;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Only admins get past this point.
+        if (Session.CurrentUser is not Admin)
+        {
+            Nav.NavigateTo("/");
+            return;
+        }
+        isAuthorised = true;
+
+        // Refresh the list automatically whenever a record gets added.
+        RecordManager.RecordAdded += OnRecordAdded;
+        await LoadAll();
+    }
+
+    private void OnRecordAdded(object? sender, StudentRecord record)
+    {
+        InvokeAsync(async () =>
+        {
+            await LoadAll();
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadAll()
+    {
+        records = await RecordManager.GetAllRecordsAsync();
+    }
+
+    private async Task Search()
+    {
+        errorMessage = null;
+        if (string.IsNullOrWhiteSpace(searchId))
+        {
+            await LoadAll();
+            return;
+        }
+        try
+        {
+            var record = await RecordManager.SearchRecordAsync(searchId.Trim());
+            records = new List<StudentRecord> { record };
+        }
+        catch (StudentNotFoundException ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task ShowAll()
+    {
+        searchId = string.Empty;
+        errorMessage = null;
+        await LoadAll();
+    }
+
+    private void GoToAdd() => Nav.NavigateTo("/admin/edit");
+
+    private void GoToEdit(int id) => Nav.NavigateTo($"/admin/edit/{id}");
+
+    private async Task Remove(string studentId)
+    {
+        try
+        {
+            await RecordManager.RemoveRecordAsync(studentId);
+            await LoadAll();
+        }
+        catch (StudentNotFoundException ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task RecalculateAll()
+    {
+        await RecordManager.RecalculateAllWamAsync();
+        await LoadAll();
+    }
+
+    private void Logout()
+    {
+        Session.CurrentUser = null;
+        Nav.NavigateTo("/");
+    }
+
+    // Unsubscribe when the page closes so old handlers don't pile up.
+    public void Dispose()
+    {
+        RecordManager.RecordAdded -= OnRecordAdded;
+    }
+}

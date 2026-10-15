@@ -1,0 +1,71 @@
+@page "/"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using StudentRecordSystem.Exceptions
+@using StudentRecordSystem.Models
+@using StudentRecordSystem.Services
+@inject AuthService AuthService
+@inject SessionService Session
+@inject NavigationManager Nav
+
+<PageTitle>Login</PageTitle>
+
+<div style="max-width:400px; margin:60px auto;">
+    <h1>Student Record System</h1>
+    <p>Sign in with your admin or student account</p>
+
+    <input @bind="username" placeholder="Username" style="width:100%; margin-bottom:10px;" />
+    <input @bind="password" type="password" placeholder="Password" style="width:100%; margin-bottom:10px;" />
+    <button @onclick="HandleLogin" disabled="@isBusy">Log In</button>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p style="color:red">@errorMessage</p>
+    }
+
+    <hr />
+    <p style="color:gray">Default admin login: admin / admin123</p>
+</div>
+
+@code {
+    private string username = string.Empty;
+    private string password = string.Empty;
+    private string? errorMessage;
+    private bool isBusy;
+
+    // Make sure the database exists and the admin account is seeded.
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthService.InitialiseAsync();
+    }
+
+    private async Task HandleLogin()
+    {
+        errorMessage = null;
+        isBusy = true;
+        try
+        {
+            User user = await AuthService.LoginAsync(username, password);
+            Session.CurrentUser = user;
+
+            // Admins and Students go to different dashboards.
+            Nav.NavigateTo(user switch
+            {
+                Admin => "/admin",
+                Student => "/student",
+                _ => "/"
+            });
+        }
+        catch (InvalidLoginException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Unexpected error: {ex.Message}";
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+}

@@ -58,3 +58,34 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+input, select {
+    display: block;
+    width: 320px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    border: 1px solid #bbb;
+    border-radius: 6px;
+    font-size: 15px;
+}
+
+button {
+    padding: 8px 16px;
+    margin: 4px 4px 4px 0;
+    border: none;
+    border-radius: 6px;
+    background: #2b579a;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+button:hover { background: #1f4278; }
+
+table {
+    border-collapse: collapse;
+    margin-top: 12px;
+}
+
+th { background: #2b579a; color: white; }
+th, td { padding: 8px 12px; border: 1px solid #ccc; }
