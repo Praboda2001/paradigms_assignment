@@ -104,6 +104,14 @@ public class RecordManager
     public async Task RemoveRecordAsync(string studentId)
     {
         StudentRecord record = await SearchRecordAsync(studentId);
+
+        // The login is a separate table, so it has to be removed here too.
+        // Otherwise the old Student ID could not be added again.
+        List<Account> accounts = await _context.Accounts
+            .Where(a => a.StudentRecordId == record.Id)
+            .ToListAsync();
+        _context.Accounts.RemoveRange(accounts);
+
         _context.StudentRecords.Remove(record);
         await _context.SaveChangesAsync();
     }
