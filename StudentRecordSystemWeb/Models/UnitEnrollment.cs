@@ -4,14 +4,16 @@
 
 using System.ComponentModel.DataAnnotations;
 
-// This shows the one unit a student is enrolled in.
+namespace StudentRecordSystem.Models;
+
+// This represents one unit a student is enrolled in.
 public class UnitEnrollment
 {
     // This is the Primary key, used by Entity Framework to identify this row.
     [Key]
     public int Id { get; set; }
 
-    // This is the unit 's short code.
+    // This is the unit's short code.
     [Required, MaxLength(10)]
     public string UnitCode { get; set; } = string.Empty;
 
