@@ -1,3 +1,4 @@
+@* Admin dashboard: ranked table of student records with a WAM bar, search, add, edit, remove and parallel WAM recalculation. *@
 @page "/admin"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using StudentRecordSystem.Exceptions
@@ -6,10 +7,14 @@
 @inject RecordManager RecordManager
 @inject SessionService Session
 @inject NavigationManager Nav
+@* IJSRuntime lets C# call the browser's built-in confirm dialog. *@
+@inject IJSRuntime JS
+@* IDisposable lets the page clean up (unsubscribe from the event) when it closes. *@
 @implements IDisposable
 
 <PageTitle>Admin Dashboard</PageTitle>
 
+@* Nothing is shown to anyone who is not an admin. *@
 @if (!isAuthorised)
 {
     <p>Redirecting...</p>
@@ -35,21 +40,26 @@ else
             <tr><th>Rank</th><th>Student ID</th><th>Name</th><th>Program</th><th>WAM</th><th>Status</th><th></th></tr>
         </thead>
         <tbody>
+            @* foreach builds one table row for each student record. *@
             @foreach (var record in records)
             {
                 <tr>
+                    @* The rank comes from the dictionary built by CalculateRanks. *@
                     <td>@ranks.GetValueOrDefault(record.Id)</td>
                     <td>@record.StudentID</td>
                     <td>@record.Name</td>
                     <td>@record.Program</td>
                     <td>
                         @record.Wam.ToString("F2")
+                        @* WAM bar: the inner bar's width is the WAM as a percentage.
+                           Math.Clamp keeps it between 0 and 100 and (int) is an explicit cast. *@
                         <div style="background:#e0e0e0; width:120px; height:8px; border-radius:4px;">
                             <div style="background:#2b579a; width:@((int)Math.Clamp(record.Wam, 0, 100))%; height:8px; border-radius:4px;"></div>
                         </div>
                     </td>
                     <td>@record.Status</td>
                     <td>
+                        @* The lambdas pass this row's values to the handlers. *@
                         <button @onclick="() => GoToEdit(record.Id)">Edit</button>
                         <button @onclick="() => Remove(record.StudentID)">Remove</button>
                     </td>
@@ -61,6 +71,7 @@ else
 
 @code {
     private List<StudentRecord> records = new();
+    // Maps each record's Id to its class rank.
     private Dictionary<int, int> ranks = new();
     private string searchId = string.Empty;
     private string? errorMessage;
@@ -76,11 +87,13 @@ else
         }
         isAuthorised = true;
 
-        // Refresh the list automatically whenever a record gets added.
+        // Subscribe to the event so the list refreshes when a record is added.
         RecordManager.RecordAdded += OnRecordAdded;
         await LoadAll();
     }
 
+    // This is the event handler. Events return void, so the work is handed to
+    // InvokeAsync, which runs it on the page's own thread and then redraws.
     private void OnRecordAdded(object? sender, StudentRecord record)
     {
         InvokeAsync(async () =>
@@ -90,11 +103,12 @@ else
         });
     }
 
+    // This loads every record and works out the ranks.
     private async Task LoadAll()
     {
         records = await RecordManager.GetAllRecordsAsync();
-        // Ranks always come from the full list, so a search result
-        // still shows the student's real class rank.
+        // Ranks always come from the full list, so a search result still
+        // shows the student's real class rank.
         ranks = RecordManager.CalculateRanks(records);
     }
 
@@ -124,12 +138,20 @@ else
         await LoadAll();
     }
 
+    // These short methods use => because their body is one expression.
     private void GoToAdd() => Nav.NavigateTo("/admin/edit");
 
     private void GoToEdit(int id) => Nav.NavigateTo($"/admin/edit/{id}");
 
     private async Task Remove(string studentId)
     {
+        // Ask first so a record is never deleted by an accidental click.
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", $"Remove student {studentId}? This cannot be undone.");
+        if (!confirmed)
+        {
+            return;
+        }
+
         try
         {
             await RecordManager.RemoveRecordAsync(studentId);
@@ -141,6 +163,7 @@ else
         }
     }
 
+    // This runs the parallel WAM recalculation and then refreshes the table.
     private async Task RecalculateAll()
     {
         await RecordManager.RecalculateAllWamAsync();
@@ -153,7 +176,7 @@ else
         Nav.NavigateTo("/");
     }
 
-    // Unsubscribe when the page closes so old handlers don't pile up.
+    // Unsubscribe when the page closes so old handlers do not pile up.
     public void Dispose()
     {
         RecordManager.RecordAdded -= OnRecordAdded;
