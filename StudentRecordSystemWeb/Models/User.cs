@@ -4,9 +4,9 @@
 
 namespace StudentRecordSystem.Models;
 
-// We use abstract base class for anyone who can log in.
-// This demonstrates encapsulation (private filed + validated property) and
-// also this is the shared base that Admin and Student inherit from.)
+// We use an abstract base class for anyone who can log in.
+// This demonstrates encapsulation (private field + validated property) and
+// also this is the shared base that Admin and Student inherit from.
 public abstract class User
 {
     // This is the Backing field for the validated Username property.

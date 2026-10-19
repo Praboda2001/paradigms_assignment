@@ -4,8 +4,8 @@
 
 namespace StudentRecordSystem.Models;
 
-// This is a staff acount.
-// Admins can add/ update/ remove student recoeds through recordManager.
+// This is a staff account.
+// Admins can add/ update/ remove student records through RecordManager.
 public class Admin : User
 {
     // This returns "Administrator" for this role.

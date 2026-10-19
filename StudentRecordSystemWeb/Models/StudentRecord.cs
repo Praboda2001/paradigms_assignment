@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace StudentRecordSystem.Models;
 
-// This is a student's academic record. data plus the one operation (CalculateWAM).
+// This is a student's academic record: data plus the one operation (CalculateWam).
 public class StudentRecord
 {
     // This is the Backing field for the validated Name property.
@@ -14,7 +14,7 @@ public class StudentRecord
     
     // This is the Primary key, used by Entity Framework to identify this row.
     [Key]
-    public int Id { get; set;}
+    public int Id { get; set; }
 
     // This is the Student's ID number and this must be unique.
     [Required, MaxLength(20)]
@@ -44,7 +44,7 @@ public class StudentRecord
     // This is the list of units the student has enrolled in, with their marks.
     public List<UnitEnrollment> Units { get; set; } = new();
 
-    // Now we recalculates WAM using LINQ's Average instead of a manual loop.
+    // This recalculates WAM using LINQ's Average instead of a manual loop.
     public double CalculateWam()
     {
         Wam = Units.Count == 0 ? 0.0 : Math.Round(Units.Average(u => u.Mark), 2);

@@ -4,7 +4,7 @@
 
 namespace StudentRecordSystem.Models;
 
-// This is a student account, we are going to linked to one StundentRecord it can view.
+// This is a student account, linked to one StudentRecord that it can view.
 public class Student : User
 {
     // This is the ID of the StudentRecord that this account is allowed to view.

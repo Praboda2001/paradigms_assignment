@@ -6,14 +6,14 @@ using System.ComponentModel.DataAnnotations;
 
 namespace StudentRecordSystem.Models;
 
-// This is the two kinds of accout the system supports.
+// This is the two kinds of account the system supports.
 public enum AccountRole
 {
     Admin,
     Student
 }
 
-// This is the persisted login credential, kept seperate from User/ Admin/ Student.
+// This is the persisted login credential, kept separate from User/ Admin/ Student.
 // So, authentication maps to EF Core cleanly.
 public class Account
 {
@@ -32,6 +32,6 @@ public class Account
     // This is the role of the account, either Admin or Student.
     public AccountRole Role { get; set; }
 
-    // This is only populated for Student accounts, links to thier StudentRecord.
+    // This is only populated for Student accounts, links to their StudentRecord.
     public int? StudentRecordId { get; set; } 
 }
