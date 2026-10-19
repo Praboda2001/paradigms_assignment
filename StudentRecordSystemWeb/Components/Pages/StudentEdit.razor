@@ -1,3 +1,5 @@
+@* Add and edit form: one page serves both modes depending on whether an Id arrives in the route. *@
+@* Two routes: /admin/edit for a new student and /admin/edit/5 for an existing one. *@
 @page "/admin/edit"
 @page "/admin/edit/{Id:int}"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
@@ -10,68 +12,77 @@
 
 <PageTitle>@(isEditMode ? "Edit Student" : "Add Student")</PageTitle>
 
-<h1>@(isEditMode ? "Edit Student" : "Add Student")</h1>
-
-<input @bind="studentId" placeholder="Student ID (e.g. STU1001)" disabled="@isEditMode" /><br />
-<input @bind="name" placeholder="Full Name" /><br />
-<input @bind="program" placeholder="Program" /><br />
-<select @bind="status">
-    <option>Active</option>
-    <option>Suspended</option>
-    <option>Graduated</option>
-</select>
-
-<h2>Enrolled Units</h2>
-<table border="1" cellpadding="6">
-    <thead>
-        <tr><th>Code</th><th>Name</th><th>Semester</th><th>Grade</th><th>Mark</th><th></th></tr>
-    </thead>
-    <tbody>
-        @foreach (var unit in units)
-        {
-            <tr>
-                <td>@unit.UnitCode</td>
-                <td>@unit.UnitName</td>
-                <td>@unit.Semester</td>
-                <td>@unit.Grade</td>
-                <td>@unit.Mark.ToString("F1")</td>
-                <td><button @onclick="() => RemoveUnit(unit)">Remove</button></td>
-            </tr>
-        }
-    </tbody>
-</table>
-
-<div style="margin-top:10px;">
-    <input @bind="newUnitCode" placeholder="Code" />
-    <input @bind="newUnitName" placeholder="Unit Name" />
-    <input @bind="newUnitSemester" placeholder="Semester" />
-    <input @bind="newUnitGrade" placeholder="Grade" />
-    <input @bind="newUnitMark" placeholder="Mark" />
-    <button @onclick="AddUnit">+ Add Unit</button>
-</div>
-
-@if (!string.IsNullOrEmpty(errorMessage))
+@* The form is hidden from anyone who is not an admin. *@
+@if (isAuthorised)
 {
-    <p style="color:red">@errorMessage</p>
+    <h1>@(isEditMode ? "Edit Student" : "Add Student")</h1>
+
+    @* The Student ID cannot be changed once the record exists. *@
+    <input @bind="studentId" placeholder="Student ID (e.g. STU1001)" disabled="@isEditMode" /><br />
+    <input @bind="name" placeholder="Full Name" /><br />
+    <input @bind="program" placeholder="Program" /><br />
+    <select @bind="status">
+        <option>Active</option>
+        <option>Suspended</option>
+        <option>Graduated</option>
+    </select>
+
+    <h2>Enrolled Units</h2>
+    <table border="1" cellpadding="6">
+        <thead>
+            <tr><th>Code</th><th>Name</th><th>Semester</th><th>Grade</th><th>Mark</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var unit in units)
+            {
+                <tr>
+                    <td>@unit.UnitCode</td>
+                    <td>@unit.UnitName</td>
+                    <td>@unit.Semester</td>
+                    <td>@unit.Grade</td>
+                    <td>@unit.Mark.ToString("F1")</td>
+                    <td><button @onclick="() => RemoveUnit(unit)">Remove</button></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div style="margin-top:10px;">
+        <input @bind="newUnitCode" placeholder="Code" />
+        <input @bind="newUnitName" placeholder="Unit Name" />
+        <input @bind="newUnitSemester" placeholder="Semester" />
+        <input @bind="newUnitGrade" placeholder="Grade" />
+        <input @bind="newUnitMark" placeholder="Mark" />
+        <button @onclick="AddUnit">+ Add Unit</button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p style="color:red">@errorMessage</p>
+    }
+
+    <br />
+    <button @onclick="Save">Save</button>
+    <button @onclick="Cancel">Cancel</button>
 }
 
-<br />
-<button @onclick="Save">Save</button>
-<button @onclick="Cancel">Cancel</button>
-
 @code {
-    // Filled in automatically from the route when editing, e.g. /admin/edit/5
+    // This is filled in automatically from the route when editing, for
+    // example /admin/edit/5. It is int? because it is missing in add mode.
     [Parameter]
     public int? Id { get; set; }
 
     private bool isEditMode;
+    private bool isAuthorised;
 
+    // These fields hold what the admin has typed into the form.
     private string studentId = string.Empty;
     private string name = string.Empty;
     private string program = string.Empty;
     private string status = "Active";
     private List<UnitEnrollment> units = new();
 
+    // These fields hold the unit that is being typed in before + Add Unit.
     private string newUnitCode = string.Empty;
     private string newUnitName = string.Empty;
     private string newUnitSemester = string.Empty;
@@ -82,11 +93,13 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Only admins get past this point.
         if (Session.CurrentUser is not Admin)
         {
             Nav.NavigateTo("/");
             return;
         }
+        isAuthorised = true;
 
         // If an Id came through the route we are editing an existing record.
         if (Id.HasValue)
@@ -99,11 +112,14 @@
                 name = editingRecord.Name;
                 program = editingRecord.Program;
                 status = editingRecord.Status;
+                // ToList copies the list so removing a unit here does not
+                // change the stored record until Save is clicked.
                 units = editingRecord.Units.ToList();
             }
         }
     }
 
+    // This adds the typed unit to the list shown in the table.
     private void AddUnit()
     {
         if (string.IsNullOrWhiteSpace(newUnitCode) || string.IsNullOrWhiteSpace(newUnitName))
@@ -112,8 +128,15 @@
             return;
         }
 
-        double.TryParse(newUnitMark, out double mark);
+        // TryParse returns false instead of throwing when the text is not a
+        // number, and passes the parsed value back through the out parameter.
+        if (!double.TryParse(newUnitMark, out double mark) || mark < 0 || mark > 100)
+        {
+            errorMessage = "Mark must be a number between 0 and 100.";
+            return;
+        }
 
+        // An object initialiser sets the properties while the object is created.
         units.Add(new UnitEnrollment
         {
             UnitCode = newUnitCode.Trim(),
@@ -123,12 +146,14 @@
             Mark = mark
         });
 
+        // Chained assignment clears all five unit boxes in one statement.
         newUnitCode = newUnitName = newUnitSemester = newUnitGrade = newUnitMark = string.Empty;
         errorMessage = null;
     }
 
     private void RemoveUnit(UnitEnrollment unit) => units.Remove(unit);
 
+    // This saves the form. It adds a new record or updates the existing one.
     private async Task Save()
     {
         errorMessage = null;
@@ -161,10 +186,12 @@
 
             Nav.NavigateTo("/admin");
         }
+        // A duplicate Student ID is shown as a message instead of crashing.
         catch (DuplicateStudentException ex)
         {
             errorMessage = ex.Message;
         }
+        // The Name property throws ArgumentException for an empty value.
         catch (ArgumentException ex)
         {
             errorMessage = ex.Message;
