@@ -1,8 +1,11 @@
+@* Login page: checks the credentials through AuthService and sends Admin and Student users to their own dashboard. *@
 @page "/"
+@* prerender: false keeps the page from running twice, so the login state is not lost. *@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using StudentRecordSystem.Exceptions
 @using StudentRecordSystem.Models
 @using StudentRecordSystem.Services
+@* Services are injected by the framework (dependency injection). *@
 @inject AuthService AuthService
 @inject SessionService Session
 @inject NavigationManager Nav
@@ -13,10 +16,12 @@
     <h1>Student Record System</h1>
     <p>Sign in with your admin or student account</p>
 
+    @* @bind keeps the text boxes and the C# fields below in sync. *@
     <input @bind="username" placeholder="Username" style="width:100%; margin-bottom:10px;" />
     <input @bind="password" type="password" placeholder="Password" style="width:100%; margin-bottom:10px;" />
     <button @onclick="HandleLogin" disabled="@isBusy">Log In</button>
 
+    @* The error message only appears when there is one. *@
     @if (!string.IsNullOrEmpty(errorMessage))
     {
         <p style="color:red">@errorMessage</p>
@@ -29,15 +34,15 @@
 @code {
     private string username = string.Empty;
     private string password = string.Empty;
+    // string? means this field may be null when there is no error to show.
     private string? errorMessage;
+    // True while a login is in progress so the button cannot be clicked twice.
     private bool isBusy;
 
-    // Make sure the database exists and the admin account is seeded.
-    protected override async Task OnInitializedAsync()
-    {
-        await AuthService.InitialiseAsync();
-    }
+    // The database and the admin account are created at start-up in
+    // Program.cs, so nothing needs to be prepared here.
 
+    // This runs when the Log In button is clicked.
     private async Task HandleLogin()
     {
         errorMessage = null;
@@ -47,7 +52,8 @@
             User user = await AuthService.LoginAsync(username, password);
             Session.CurrentUser = user;
 
-            // Admins and Students go to different dashboards.
+            // A switch expression with type patterns picks the page for each
+            // kind of user.
             Nav.NavigateTo(user switch
             {
                 Admin => "/admin",
@@ -55,14 +61,17 @@
                 _ => "/"
             });
         }
+        // The narrow catch handles the expected failure first.
         catch (InvalidLoginException ex)
         {
             errorMessage = ex.Message;
         }
+        // The broad catch is a safety net for anything unexpected.
         catch (Exception ex)
         {
             errorMessage = $"Unexpected error: {ex.Message}";
         }
+        // finally runs whether or not an exception happened.
         finally
         {
             isBusy = false;
