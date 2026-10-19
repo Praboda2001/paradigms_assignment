@@ -89,3 +89,44 @@ table {
 
 th { background: #2b579a; color: white; }
 th, td { padding: 8px 12px; border: 1px solid #ccc; }
+/* ---- Student Record System: simple, consistent styling for the demo pages ---- */
+input:not([type=checkbox]), select {
+    padding: 6px 10px;
+    margin: 0 6px 8px 0;
+    border: 1px solid #b8c2cc;
+    border-radius: 4px;
+}
+
+button {
+    padding: 6px 14px;
+    margin: 0 6px 8px 0;
+    border: 1px solid #1861ac;
+    border-radius: 4px;
+    background-color: #1b6ec2;
+    color: #fff;
+    cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+    background-color: #1861ac;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+table {
+    border-collapse: collapse;
+    margin-top: 12px;
+}
+
+th {
+    background-color: #eef3fa;
+    text-align: left;
+}
+
+th, td {
+    border: 1px solid #d0d7de !important;
+    padding: 8px 12px !important;
+}
