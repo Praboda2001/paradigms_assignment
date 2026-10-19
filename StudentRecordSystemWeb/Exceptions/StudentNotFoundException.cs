@@ -4,7 +4,7 @@
 
 namespace StudentRecordSystem.Exceptions;
 
-// We use this when a lookup student ID fins no matching record in the system.
+// We use this when a lookup student ID finds no matching record in the system.
 public class StudentNotFoundException : Exception
 {
     // We use this to builds a message naming the missing ID,
