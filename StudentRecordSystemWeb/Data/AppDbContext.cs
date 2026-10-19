@@ -8,10 +8,10 @@ using StudentRecordSystem.Models;
 namespace StudentRecordSystem.Data;
 
 // This is EF Core's connection to the database. 
-// It's what turn our plain C# classes into SQLite tables and back again.
+// It's what turns our plain C# classes into SQLite tables and back again.
 public class AppDbContext : DbContext
 {
-    // This is connection settings get passes in from MauiProgram.cs
+    // The connection settings get passed in from Program.cs
     // rather than being hardcoded here.
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
